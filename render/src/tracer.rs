@@ -1,4 +1,4 @@
-use crate::{backend::{BlendMode, FillMode, StrokeStyle}, BBox, Backend, DrawMode, Fill, FontEntry, TextSpan};
+use crate::{backend::{BlendMode, FillMode, Stroke}, font::FontRc, BBox, Backend, DrawMode, Fill, FontEntry, TextSpan};
 use pathfinder_content::{
     outline::Outline,
     fill::FillRule,
@@ -26,16 +26,17 @@ pub struct ClipPath {
 #[derive(Copy, Clone, Debug)]
 pub struct ClipPathId(pub usize);
 
-pub struct Tracer<'a, E: Encoder> {
-    pub items: Vec<DrawItem>,
+pub struct Tracer<'a, E: Encoder> where E::GlyphRef: Sync + Send {
+    pub items: Vec<DrawItem<E>>,
     clip_paths: &'a mut Vec<ClipPath>,
     pub view_box: RectF,
-    cache: &'a TraceCache<E>,
+    cache: &'a mut TraceCache<E>,
     op_nr: usize,
 }
-pub struct TraceCache<E:Encoder> {
+pub struct TraceCache<E:Encoder> where E::GlyphRef: Sync + Send {
     fonts: Arc<SyncCache<u64, Option<Arc<FontEntry<E>>>>>,
     std: StandardCache<E>,
+    encoder: E,
 }
 fn font_key(font_ref: &MaybeRef<PdfFont>) -> u64 {
     match font_ref {
@@ -43,19 +44,20 @@ fn font_key(font_ref: &MaybeRef<PdfFont>) -> u64 {
         MaybeRef::Indirect(re) => re.get_ref().get_inner().id as _
     }
 }
-impl<E:Encoder> TraceCache<E> {
-    pub fn new() -> Self {
+impl<E: Encoder + 'static> TraceCache<E> where E::GlyphRef: Sync + Send {
+    pub fn new(encoder: E) -> Self {
         let standard_fonts = PathBuf::from(std::env::var_os("STANDARD_FONTS").expect("STANDARD_FONTS is not set. Please check https://github.com/pdf-rs/pdf_render/#fonts for instructions."));
 
         TraceCache {
             fonts: SyncCache::new(),
             std: StandardCache::new(standard_fonts),
+            encoder
         }
     }
-    pub fn get_font(&self, font_ref: &MaybeRef<PdfFont>, resolve: &impl Resolve) -> Result<Option<Arc<FontEntry<>>>, PdfError> {
+    pub fn get_font(&mut self, font_ref: &MaybeRef<PdfFont>, resolve: &impl Resolve) -> Result<Option<Arc<FontEntry<E>>>, PdfError> {
         let mut error = None;
         let val = self.fonts.get(font_key(font_ref), || 
-            match load_font(font_ref, resolve, &self.std) {
+            match load_font(&mut self.encoder, font_ref, resolve, &self.std) {
                 Ok(Some(f)) => Some(Arc::new(f)),
                 Ok(None) => None,
                 Err(e) => {
@@ -73,8 +75,8 @@ impl<E:Encoder> TraceCache<E> {
         self.std.require_unique_unicode(require_unique_unicode);
     }
 }
-impl<'a> Tracer<'a> {
-    pub fn new(cache: &'a TraceCache, clip_paths: &'a mut Vec<ClipPath>) -> Self {
+impl<'a, E: Encoder> Tracer<'a, E> where E::GlyphRef: Sync + Send {
+    pub fn new(cache: &'a mut TraceCache<E>, clip_paths: &'a mut Vec<ClipPath>) -> Self {
         Tracer {
             items: vec![],
             view_box: RectF::new(Vector2F::zero(), Vector2F::zero()),
@@ -83,15 +85,16 @@ impl<'a> Tracer<'a> {
             clip_paths,
         }
     }
-    pub fn finish(self) -> Vec<DrawItem> {
+    pub fn finish(self) -> Vec<DrawItem<E>> {
         self.items
     }
     pub fn view_box(&self) -> RectF {
         self.view_box
     }
 }
-impl<'a> Backend for Tracer<'a> {
+impl<'a, E: Encoder + Clone + 'static> Backend for Tracer<'a, E> where E::GlyphRef: Sync + Send {
     type ClipPathId = ClipPathId;
+    type Encoder = E;
 
     fn create_clip_path(&mut self, path: Outline, fill_rule: FillRule, parent: Option<ClipPathId>) -> ClipPathId {
         let id = ClipPathId(self.clip_paths.len());
@@ -139,11 +142,18 @@ impl<'a> Backend for Tracer<'a> {
             rect, im: im.clone(), transform, op_nr: self.op_nr, mode, clip
         }));
     }
-    fn draw_glyph(&mut self, _glyph: &Glyph, _mode: &DrawMode, _transform: Transform2F, clip: Option<ClipPathId>) {}
-    fn get_font(&mut self, font_ref: &MaybeRef<PdfFont>, resolve: &impl Resolve) -> Result<Option<Arc<FontEntry>>, PdfError> {
+    fn draw_glyph(
+        &mut self,
+        _font: &FontRc<Self::Encoder>,
+        _glyph: &font::Glyph<Self::Encoder>,
+        _mode: &DrawMode,
+        _transform: pathfinder_geometry::transform2d::Transform2F,
+        _clip: Option<Self::ClipPathId>,
+    )  {}
+    fn get_font(&mut self, font_ref: &MaybeRef<PdfFont>, resolve: &impl Resolve) -> Result<Option<Arc<FontEntry<Self::Encoder>>>, PdfError> {
         self.cache.get_font(font_ref, resolve)
     }
-    fn add_text(&mut self, span: TextSpan, clip: Option<Self::ClipPathId>) {
+    fn add_text(&mut self, span: TextSpan<Self::Encoder>, clip: Option<Self::ClipPathId>) {
         self.items.push(DrawItem::Text(span, clip));
     }
     fn bug_op(&mut self, op_nr: usize) {
@@ -171,18 +181,18 @@ pub struct InlineImageObject {
 }
 
 #[derive(Debug)]
-pub enum DrawItem {
+pub enum DrawItem<E: Encoder> {
     Vector(VectorPath),
     Image(ImageObject),
     InlineImage(InlineImageObject),
-    Text(TextSpan, Option<ClipPathId>),
+    Text(TextSpan<E>, Option<ClipPathId>),
 }
 
 #[derive(Debug)]
 pub struct VectorPath {
     pub outline: Outline,
     pub fill: Option<FillMode>,
-    pub stroke: Option<(FillMode, StrokeStyle)>,
+    pub stroke: Option<(FillMode, Stroke)>,
     pub transform: Transform2F,
     pub op_nr: usize,
     pub clip: Option<ClipPathId>,

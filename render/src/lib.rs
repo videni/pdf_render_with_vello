@@ -25,10 +25,10 @@ mod fontentry;
 mod graphicsstate;
 mod renderstate;
 mod textstate;
-// pub mod tracer;
+pub mod tracer;
 mod image;
 // mod pathfinder_backend;
-mod font;
+pub mod font;
 pub mod vello_backend;
 
 use ::font::Encoder;

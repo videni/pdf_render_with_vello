@@ -14,7 +14,7 @@ use vello::{
     Scene,
 };
 
-use crate::{font::FontRc, load_image, Backend, Cache, DrawMode, FillMode};
+use crate::{font::{FontRc, OutlineBuilder}, load_image, Backend, Cache, DrawMode, FillMode};
 
 pub struct VelloBackend<'a> {
     scene: Scene,
@@ -143,29 +143,6 @@ fn convert_stroke(stroke: &crate::backend::Stroke) -> vello::kurbo::Stroke {
     }
 }
 
-#[derive(Default)]
-pub struct OutlineBuilder {}
-
-impl Encoder for OutlineBuilder {
-    type Pen<'a> = PathBuilder;
-
-    type GlyphRef = Outline;
-
-    fn encode_shape<'f, O, E>(
-        &mut self,
-        mut f: impl for<'a> FnMut(&'a mut Self::Pen<'a>) -> Result<O, E> + 'f,
-    ) -> Result<(O, Self::GlyphRef), E> {
-        let mut builder = PathBuilder::new();
-        let o = f(&mut builder)?;
-        Ok((o, builder.finish()))
-    }
-}
-
-impl Clone for OutlineBuilder {
-    fn clone(&self) -> Self {
-        OutlineBuilder {}
-    }
-}
 
 impl<'a> Backend for VelloBackend<'a> {
     type Encoder = OutlineBuilder;
@@ -212,7 +189,8 @@ impl<'a> Backend for VelloBackend<'a> {
             self.scene.stroke(&stroke, transform, brush, None, &shape);
         }
     }
-    fn add_text(&mut self, span: crate::TextSpan<OutlineBuilder>, clip: Option<Self::ClipPathId>) {}
+    fn add_text(&mut self, span: crate::TextSpan<OutlineBuilder>, clip: Option<Self::ClipPathId>) {
+    }
 
     fn set_view_box(&mut self, r: pathfinder_geometry::rect::RectF) {}
 

@@ -16,6 +16,7 @@ use super::FontEntry;
 use globalcache::{sync::SyncCache, ValueSize};
 use std::hash::{Hash, Hasher};
 
+
 pub struct FontRc<E: Encoder>(Arc<font::FontVariant<E>>);
 impl<E: Encoder> Clone for FontRc<E> {
     #[inline]
@@ -81,7 +82,6 @@ impl<E: Encoder + 'static> StandardCache<E> where E::GlyphRef: Sync + Send {
 
         #[cfg(feature="glyphmatcher")]
         let font_db = db_path.is_dir().then(|| FontDb::new(db_path));
-        dbg!(&dump);
 
         StandardCache {
             inner: SyncCache::new(),
@@ -200,4 +200,31 @@ pub fn load_font<E: Encoder + 'static>(encoder: &mut E, font_ref: &MaybeRef<PdfF
     Ok(Some(FontEntry::build(font, pdf_font, 
         #[cfg(feature="glyphmatcher")] cache.font_db.as_ref(),
         resolve, cache.require_unique_unicode)?))
+}
+
+use font::pathfinder_impl::PathBuilder;
+use pathfinder_content::outline::Outline;
+
+#[derive(Default)]
+pub struct OutlineBuilder {}
+
+impl Encoder for OutlineBuilder {
+    type Pen<'a> = PathBuilder;
+
+    type GlyphRef = Outline;
+
+    fn encode_shape<'f, O, E>(
+        &mut self,
+        mut f: impl for<'a> FnMut(&'a mut Self::Pen<'a>) -> Result<O, E> + 'f,
+    ) -> Result<(O, Self::GlyphRef), E> {
+        let mut builder = PathBuilder::new();
+        let o = f(&mut builder)?;
+        Ok((o, builder.finish()))
+    }
+}
+
+impl Clone for OutlineBuilder {
+    fn clone(&self) -> Self {
+        OutlineBuilder {}
+    }
 }
