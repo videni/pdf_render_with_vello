@@ -56,7 +56,7 @@ impl<E: Encoder + 'static> TraceCache<E> where E::GlyphRef: Sync + Send {
     }
     pub fn get_font(&mut self, font_ref: &MaybeRef<PdfFont>, resolve: &impl Resolve) -> Result<Option<Arc<FontEntry<E>>>, PdfError> {
         let mut error = None;
-        let val = self.fonts.get(font_key(font_ref), || 
+        let val = self.fonts.get(font_key(font_ref), |_| 
             match load_font(&mut self.encoder, font_ref, resolve, &self.std) {
                 Ok(Some(f)) => Some(Arc::new(f)),
                 Ok(None) => None,

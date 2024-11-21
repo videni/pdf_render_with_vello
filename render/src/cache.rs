@@ -90,7 +90,7 @@ impl<E: Encoder + 'static> Cache<E> where E::GlyphRef: Send + Sync {
     }
     pub fn get_font(&mut self, pdf_font: &MaybeRef<PdfFont>, resolve: &impl Resolve) -> Result<Option<Arc<FontEntry<E>>>> {
         let mut error = None;
-        let val = self.fonts.get(&**pdf_font as *const PdfFont as usize, || 
+        let val = self.fonts.get(&**pdf_font as *const PdfFont as usize, |_| 
             match load_font(&mut self.encoder, pdf_font, resolve, &self.std) {
                 Ok(Some(f)) => Some(Arc::new(f)),
                 Ok(None) => {
@@ -112,7 +112,7 @@ impl<E: Encoder + 'static> Cache<E> where E::GlyphRef: Send + Sync {
     }
 
     pub fn get_image(&mut self, xobject_ref: Ref<XObject>, im: &ImageXObject, resources: &Resources, resolve: &impl Resolve, mode: BlendMode) -> ImageResult {
-        self.images.get((xobject_ref, mode), ||
+        self.images.get((xobject_ref, mode), |_|
             ImageResult(Arc::new(load_image(im, resources, resolve, mode).map(|image|
                 Image::new(Vector2I::new(im.width as i32, im.height as i32), Arc::new(image.into_data().into()))
             )))
