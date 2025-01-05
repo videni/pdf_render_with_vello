@@ -4,4 +4,18 @@ resolver = "2"
 members = [
     "render",
     "vello",
+    "examples/pdf2image",
 ]
+
+[workspace.dependencies]
+font = { git = "https://github.com/videni/font", branch = "master", features=['cff']}
+pathfinder_geometry = { git = "https://github.com/servo/pathfinder" }
+pathfinder_content = { git = "https://github.com/servo/pathfinder" }
+pathfinder_color = { git = "https://github.com/servo/pathfinder" }
+
+[workspace.dependencies.pdf]
+default-features=false 
+features = ["cache", "dump"]
+git = "https://github.com/pdf-rs/pdf"
+rev = "9002322822a3773d3d265dee81d855b40f5e0d0a"
+

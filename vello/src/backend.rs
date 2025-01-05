@@ -1,20 +1,18 @@
-use font::{pathfinder_impl::PathBuilder, Encoder, Glyph};
-use pathfinder_color::{ColorF, ColorU};
+use font::Glyph;
 use pathfinder_content::{
     fill::FillRule,
     outline::{ContourIterFlags, Outline},
-    pattern::Pattern,
-    segment::{Segment, SegmentKind},
+    segment::SegmentKind,
 };
-use pathfinder_geometry::{rect::RectF, transform2d::Transform2F, vector::Vector2F};
+use pathfinder_geometry::{transform2d::Transform2F, vector::Vector2F};
 use vello::{
-    skrifa::color::Brush,
-    kurbo::{Affine, BezPath, Cap, Stroke},
-    peniko::{Blob, BrushRef, Color, Fill, Format, Image, Mix},
+    kurbo::{Affine, BezPath, Cap},
+    peniko::{Blob, BrushRef, Color, Fill, ImageFormat, Image, Mix},
     Scene,
 };
 
-use crate::{font::{FontRc, OutlineBuilder}, load_image, Backend, Cache, DrawMode, FillMode};
+use pdf_render::font::{FontRc, OutlineBuilder};
+use pdf_render::{self, load_image, Backend, Cache, DrawMode, FillMode};
 
 pub struct VelloBackend<'a> {
     scene: Scene,
@@ -108,19 +106,13 @@ pub fn outline_to_bez(outline: &Outline) -> BezPath {
 
 fn convert_fill(fill: &FillMode) -> BrushRef<'static> {
     match fill.color {
-        crate::Fill::Solid(r, g, b) => {
-            let ColorU { r, g, b, a } = ColorF::new(r, g, b, fill.alpha).to_u8();
-            BrushRef::Solid(Color { r, g, b, a })
+        pdf_render::Fill::Solid(r, g, b) => {
+            BrushRef::Solid(Color::new([r, g, b, fill.alpha]))
         }
-        _ => BrushRef::Solid(Color {
-            r: 255,
-            g: 0,
-            b: 255,
-            a: 127,
-        }),
+        _ => BrushRef::Solid(Color::new([1.0, 0.0, 1.0, 0.5])),
     }
 }
-fn convert_stroke(stroke: &crate::backend::Stroke) -> vello::kurbo::Stroke {
+fn convert_stroke(stroke: &pdf_render::backend::Stroke) -> vello::kurbo::Stroke {
     let (dash_pattern, dash_offset) = stroke.dash_pattern.clone().unwrap_or_default();
     let end_cap = match stroke.style.line_cap {
         pathfinder_content::stroke::LineCap::Butt => Cap::Butt,
@@ -161,7 +153,7 @@ impl<'a> Backend for VelloBackend<'a> {
     fn draw(
         &mut self,
         outline: &pathfinder_content::outline::Outline,
-        mode: &crate::DrawMode,
+        mode: &pdf_render::DrawMode,
         fill_rule: pathfinder_content::fill::FillRule,
         transform: pathfinder_geometry::transform2d::Transform2F,
         clip: Option<Self::ClipPathId>,
@@ -189,7 +181,7 @@ impl<'a> Backend for VelloBackend<'a> {
             self.scene.stroke(&stroke, transform, brush, None, &shape);
         }
     }
-    fn add_text(&mut self, span: crate::TextSpan<OutlineBuilder>, clip: Option<Self::ClipPathId>) {
+    fn add_text(&mut self, span: pdf_render::TextSpan<OutlineBuilder>, clip: Option<Self::ClipPathId>) {
     }
 
     fn set_view_box(&mut self, r: pathfinder_geometry::rect::RectF) {}
@@ -200,7 +192,7 @@ impl<'a> Backend for VelloBackend<'a> {
         im: &pdf::object::ImageXObject,
         resources: &pdf::object::Resources,
         transform: pathfinder_geometry::transform2d::Transform2F,
-        mode: crate::BlendMode,
+        mode: pdf_render::BlendMode,
         clip: Option<Self::ClipPathId>,
         resolve: &impl pdf::object::Resolve,
     ) {
@@ -209,7 +201,7 @@ impl<'a> Backend for VelloBackend<'a> {
             .get_image(xref, im, resources, resolve, mode)
             .rgba_data()
         {
-            let image: Image = Image::new(Blob::new(data), Format::Rgba8, width, height);
+            let image: Image = Image::new(Blob::new(data), ImageFormat::Rgba8, width, height);
 
             self.do_draw_image(&image, transform, clip);
         }
@@ -220,14 +212,14 @@ impl<'a> Backend for VelloBackend<'a> {
         im: &std::sync::Arc<pdf::object::ImageXObject>,
         resources: &pdf::object::Resources,
         transform: pathfinder_geometry::transform2d::Transform2F,
-        mode: crate::BlendMode,
+        mode: pdf_render::BlendMode,
         clip: Option<Self::ClipPathId>,
         resolve: &impl pdf::object::Resolve,
     ) {
         if let Ok(image_data)  = load_image(im, resources, resolve, mode) {
             let width = image_data.width();
             let height = image_data.height();
-            let image: Image = Image::new(Blob::new(image_data.rgba_data()), Format::Rgba8, width, height);
+            let image: Image = Image::new(Blob::new(image_data.rgba_data()), ImageFormat::Rgba8, width, height);
 
             self.do_draw_image(&image, transform, clip);
         }
@@ -236,7 +228,7 @@ impl<'a> Backend for VelloBackend<'a> {
         &mut self,
         font_ref: &pdf::object::MaybeRef<pdf::font::Font>,
         resolve: &impl pdf::object::Resolve,
-    ) -> Result<Option<std::sync::Arc<crate::FontEntry<OutlineBuilder>>>, pdf::PdfError> {
+    ) -> Result<Option<std::sync::Arc<pdf_render::FontEntry<OutlineBuilder>>>, pdf::PdfError> {
         self.cache.get_font(font_ref, resolve)
     }
     fn draw_glyph(

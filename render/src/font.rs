@@ -173,7 +173,7 @@ pub fn load_font<E: Encoder + 'static>(encoder: &mut E, font_ref: &MaybeRef<PdfF
 use font::pathfinder_impl::PathBuilder;
 use pathfinder_content::outline::Outline;
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct OutlineBuilder {}
 
 impl Encoder for OutlineBuilder {

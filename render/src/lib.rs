@@ -19,7 +19,7 @@ macro_rules! unimplemented {
     };
 }
 
-mod backend;
+pub mod backend;
 mod cache;
 mod fontentry;
 mod graphicsstate;

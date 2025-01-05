@@ -12,17 +12,12 @@ glyphmatcher = ["dep:glyphmatcher"]
 name = "render"
 harness = false
 
-[dependencies.pdf]
-default-features=false 
-features = ["cache", "dump"]
-git = "https://github.com/pdf-rs/pdf"
 
 [dependencies]
-pathfinder_color = { git = "https://github.com/servo/pathfinder" }
-pathfinder_geometry = { git = "https://github.com/servo/pathfinder" }
-pathfinder_content = { git = "https://github.com/servo/pathfinder" }
+pathfinder_color.workspace = true
+pathfinder_geometry.workspace = true
+pathfinder_content.workspace = true
 log = "0.4"
-font = { git = "https://github.com/pdf-rs/font", branch = "vello", features=['cff']}
 pdf_encoding = "0.4"
 itertools = "*"
 image = "0.24.2"
@@ -33,6 +28,8 @@ istring = { git = "https://github.com/s3bk/istring" }
 once_cell = "*"
 serde_json = "*"
 glyphmatcher = { git = "https://github.com/s3bk/glyphmatcher", optional = true }
+font.workspace = true
+pdf.workspace = true
 
 [dev-dependencies]
 criterion = "0.3"

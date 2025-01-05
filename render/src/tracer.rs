@@ -8,7 +8,7 @@ use pathfinder_geometry::{
     transform2d::Transform2F,
     vector::Vector2F,
 };
-use pdf::object::{Ref, XObject, ImageXObject, Resolve, Resources, MaybeRef};
+use pdf::object::{Ref, XObject, ImageXObject, Resolve, Resources, Lazy, MaybeRef};
 use font::{Encoder, Glyph};
 use pdf::font::Font as PdfFont;
 use pdf::error::PdfError;

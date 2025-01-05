@@ -4,13 +4,16 @@ version = "0.1.0"
 authors = ["Vidy Videni <vidyvideni@gmail.com>", "Sebastian Köln <s3bk@protonmail.com>"]
 edition = "2021"
 
-[dependencies.pdf]
-default-features=false 
-features = ["cache", "dump"]
-git = "https://github.com/pdf-rs/pdf"
-
 [dependencies]
 pdf_render= { path = "../render" }
 vello_encoding = "*"
 vello =  { git="https://github.com/linebender/vello", branch="main" }
-font = { git = "https://github.com/pdf-rs/font", branch = "vello", features=['cff']}
+font.workspace = true
+pathfinder_geometry.workspace = true
+pathfinder_content.workspace = true
+pathfinder_color.workspace = true
+pdf.workspace = true
+
+[dev-dependencies]
+criterion = "0.3"
+env_logger = "*"
