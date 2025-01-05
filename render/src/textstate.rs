@@ -13,7 +13,7 @@ use super::{
     Backend,
     TextChar,
 };
-use std::convert::TryInto;
+use std::{convert::TryInto, io::Read};
 use pdf::content::TextMode;
 use std::sync::Arc;
 use itertools::Either;
@@ -68,6 +68,7 @@ impl<E: Encoder + Clone + 'static> TextState<E> {
     }
     pub fn draw_text<B: Backend<Encoder = E>>(&mut self, backend: &mut B, gs: &GraphicsState<B>, data: &[u8], span: &mut Span, fill_mode: BlendMode, stroke_mode: BlendMode) {
         use font::Font;
+
         let e = match self.font_entry {
             Some(ref e) => e,
             None => {
@@ -100,7 +101,7 @@ impl<E: Encoder + Clone + 'static> TextState<E> {
         };
         let e = self.font_entry.as_ref().expect("no font");
 
-          let tr = Transform2F::row_major(
+        let tr = Transform2F::row_major(
             self.horiz_scale * self.font_size, 0., 0.,
             0., self.font_size, self.rise
         ) * e.font.font_matrix();
@@ -136,6 +137,7 @@ impl<E: Encoder + Clone + 'static> TextState<E> {
             }
             if let (Some(glyph), Some(draw_mode)) = (glyph, draw_mode.as_ref()){
                 let transform = gs.transform * self.text_matrix * tr;
+
                 backend.draw_glyph(&e.font, &glyph, draw_mode, transform, gs.clip_path_id);
             } else {
                 debug!("no glyph for gid {:?}", gid);

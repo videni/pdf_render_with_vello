@@ -330,6 +330,8 @@ impl<'a, R: Resolve, B: Backend> RenderState<'a, R, B> {
             Op::TextDraw { ref text } => {
                 let fill_mode = self.blend_mode_fill();
                 let stroke_mode = self.blend_mode_stroke();
+                // dbg!("TextDraw", text);
+
                 self.text(|backend, text_state, graphics_state, span| {
                     text_state.draw_text(backend, graphics_state, &text.data, span, fill_mode, stroke_mode);
                 }, op_nr);
@@ -337,10 +339,13 @@ impl<'a, R: Resolve, B: Backend> RenderState<'a, R, B> {
             Op::TextDrawAdjusted { ref array } => {
                 let fill_mode = self.blend_mode_fill();
                 let stroke_mode = self.blend_mode_stroke();
+
                 self.text(|backend, text_state, graphics_state, span| {
                     for arg in array {
                         match *arg {
                             TextDrawAdjusted::Text(ref data) => {
+                                // dbg!("TextDrawAdjusted", data);
+
                                 text_state.draw_text(backend, graphics_state, data.as_bytes(), span, fill_mode, stroke_mode);
                             },
                             TextDrawAdjusted::Spacing(offset) => {

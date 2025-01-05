@@ -27,15 +27,12 @@ mod renderstate;
 mod textstate;
 pub mod tracer;
 mod image;
-// mod pathfinder_backend;
 pub mod font;
-pub mod vello_backend;
 
 use ::font::Encoder;
 pub use backend::{Backend, BlendMode, DrawMode, FillMode};
 pub use cache::Cache;
 pub use fontentry::FontEntry;
-// pub use pathfinder_backend::SceneBackend;
 pub use crate::image::{load_image, ImageData};
 use custom_debug_derive::Debug;
 
@@ -119,10 +116,9 @@ pub fn render_page(
         -br.min_x().min(br.max_x()),
         -br.min_y().min(br.max_y()),
     ));
-
-    let view_box = transform * translate * br;
     
-    // dbg!(size, view_box);
+    let view_box = transform * translate * br;
+
     backend.set_view_box(view_box);
 
     let root_transformation = transform

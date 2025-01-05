@@ -3,7 +3,5 @@ resolver = "2"
 
 members = [
     "render",
-    # "view",
-    "vview",
-    "examples/pdf_viewer",
+    "vello",
 ]

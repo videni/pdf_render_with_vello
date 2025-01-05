@@ -16,7 +16,6 @@ use pathfinder_content::{
     pattern::{Image},
 };
 
-use crate::font::GlyphData;
 use crate::BlendMode;
 
 use super::{fontentry::FontEntry};
