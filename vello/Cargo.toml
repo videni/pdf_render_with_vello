@@ -7,7 +7,7 @@ edition = "2021"
 [dependencies]
 pdf_render= { path = "../render" }
 vello_encoding = "*"
-vello =  { git="https://github.com/linebender/vello", branch="main" }
+vello = { git="https://github.com/linebender/vello", rev="ef1c68ee24f76de55c101bb5c419ea0ca66cc6f5" }
 font.workspace = true
 pathfinder_geometry.workspace = true
 pathfinder_content.workspace = true
